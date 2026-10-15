@@ -1,0 +1,6 @@
+{
+  "name": "RIZZ AI 2.0",
+  "description": "RIZZ AI 2.0 — C4RL3NTZ Edition. Assistant de conversation natif et intelligent.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

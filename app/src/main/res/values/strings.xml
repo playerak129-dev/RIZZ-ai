@@ -1,0 +1,28 @@
+<resources>
+    <string name="app_name">RIZZ AI 2.0</string>
+    <string name="app_edition">C4RL3NTZ EDITION</string>
+    <string name="app_tagline">Assistant conversationnel &amp; répartie</string>
+    <string name="empty_state_title">Prêt à faire la différence ?</string>
+    <string name="empty_state_subtitle">Saisis un message ou envoie une capture d\'écran pour affûter ta conversation.</string>
+    <string name="suggestion_opener_1">Comment relancer sans faire needy ?</string>
+    <string name="suggestion_opener_2">Une bio percutante en 3 mots</string>
+    <string name="suggestion_opener_3">Amorce originale pour briser la glace</string>
+    <string name="input_placeholder">Écris ton message ou pose une question...</string>
+    <string name="send_button_desc">Envoyer</string>
+    <string name="user_role">Moi</string>
+    <string name="assistant_role">RIZZ AI</string>
+    <string name="system_role">Système</string>
+    <string name="status_phase_4">Phase 4 • Moteur de Styles &amp; Rizz Rapide</string>
+    <string name="clear_history">Effacer la discussion</string>
+    <string name="message_counter_format">%1$d messages</string>
+    <string name="theme_toggle_desc">Changer le mode du thème</string>
+    <string name="theme_mode_system">Thème : Automatique</string>
+    <string name="theme_mode_dark">Thème : Sombre</string>
+    <string name="theme_mode_light">Thème : Clair</string>
+    <string name="orb_desc">Orbe vivant RIZZ AI</string>
+    <string name="attach_image_desc">Joindre une capture ou photo</string>
+    <string name="remove_image_desc">Supprimer l\'image sélectionnée</string>
+    <string name="retry_button">Réessayer</string>
+    <string name="generating_indicator">RIZZ AI réfléchit...</string>
+    <string name="open_rizz_rapide_desc">Ouvrir Rizz Rapide</string>
+</resources>
