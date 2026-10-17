@@ -1,5 +1,6 @@
 package com.example.presentation.conversation
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -115,6 +116,40 @@ fun ConversationScreen(
       }
     }
     previousMessageCount = currentCount
+  }
+
+  // Back gestures for modal dialogs and sheets
+  BackHandler(enabled = uiState.isRenameDialogOpen) {
+    viewModel.dismissRenameDialog()
+  }
+  BackHandler(enabled = uiState.isSetPinDialogOpen) {
+    viewModel.dismissSetPinDialog()
+  }
+  BackHandler(enabled = uiState.isExportDialogOpen) {
+    viewModel.closeExportDialog()
+  }
+  BackHandler(enabled = uiState.isImportDialogOpen) {
+    viewModel.closeImportDialog()
+  }
+  BackHandler(enabled = uiState.isSettingsOpen && !uiState.isSetPinDialogOpen) {
+    viewModel.closeSettings()
+  }
+  BackHandler(enabled = uiState.isBlendDialogOpen) {
+    viewModel.closeBlendDialog()
+  }
+  BackHandler(enabled = uiState.isStrategicBoardOpen) {
+    viewModel.closeStrategicBoard()
+  }
+  BackHandler(enabled = uiState.isRizzRapideOpen) {
+    viewModel.closeRizzRapide()
+  }
+  BackHandler(
+    enabled = uiState.isHistoryOpen &&
+      !uiState.isRenameDialogOpen &&
+      !uiState.isExportDialogOpen &&
+      !uiState.isImportDialogOpen
+  ) {
+    viewModel.closeHistory()
   }
 
   // Fluid ambient backdrop

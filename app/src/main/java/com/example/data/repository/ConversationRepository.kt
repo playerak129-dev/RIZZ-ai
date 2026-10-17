@@ -11,6 +11,7 @@ interface ConversationRepository {
   fun observeAllConversationsSummary(): Flow<List<ConversationSummary>>
   fun getCurrentConversation(): Conversation
   suspend fun addMessage(message: Message)
+  suspend fun deleteMessage(messageId: String)
   suspend fun clearConversation()
   suspend fun createNewConversation(title: String = "Nouvelle discussion", styleSettings: StyleSettings = StyleSettings()): String
   suspend fun switchConversation(id: String)

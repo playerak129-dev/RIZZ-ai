@@ -2,6 +2,7 @@ package com.example.data.repository
 
 import com.example.BuildConfig
 import com.example.core.AiConfig
+import com.example.core.MarkdownFormatter
 import com.example.data.remote.RemoteAiDataSource
 import com.example.data.remote.dto.ContentDto
 import com.example.data.remote.dto.GeminiRequestDto
@@ -38,22 +39,29 @@ class GeminiAiRepository(
       return AiResult.Error(AiError.ApiKeyMissing)
     }
 
-    val pastMessages = conversation.messages
+    val historyMessages = conversation.messages
       .filter { it.role == MessageRole.USER || it.role == MessageRole.ASSISTANT }
+      .let { list ->
+        if (list.isNotEmpty() && list.last().role == MessageRole.USER && list.last().content.trim() == userPrompt.trim()) {
+          list.dropLast(1)
+        } else {
+          list
+        }
+      }
       .takeLast(AiConfig.MAX_CONTEXT_MESSAGES)
 
     val contents = mutableListOf<ContentDto>()
 
-    for (msg in pastMessages) {
+    for (msg in historyMessages) {
       val role = if (msg.role == MessageRole.USER) "user" else "model"
-      val parts = mutableListOf<PartDto>()
-
       if (msg.content.isNotBlank()) {
-        parts.add(PartDto(text = msg.content))
-      }
-
-      if (parts.isNotEmpty()) {
-        contents.add(ContentDto(role = role, parts = parts))
+        if (contents.isNotEmpty() && contents.last().role == role) {
+          val lastParts = contents.last().parts.toMutableList()
+          lastParts.add(PartDto(text = msg.content))
+          contents[contents.lastIndex] = contents.last().copy(parts = lastParts)
+        } else {
+          contents.add(ContentDto(role = role, parts = listOf(PartDto(text = msg.content))))
+        }
       }
     }
 
@@ -257,7 +265,7 @@ class GeminiAiRepository(
         val optObj = optionsArray.getJSONObject(i)
         val id = optObj.optString("id", "opt_$i")
         val name = optObj.optString("name", "Option ${i + 1}")
-        val proposedReply = optObj.optString("proposedReply", "")
+        val proposedReply = cleanOptionText(optObj.optString("proposedReply", ""))
         val tone = optObj.optString("tone", "Équilibré")
         val score = optObj.optInt("score", 85)
         val isRecommended = optObj.optBoolean("isRecommended", i == 0)
@@ -283,7 +291,7 @@ class GeminiAiRepository(
               StrategicBranch(
                 trigger = brObj.optString("trigger", "Réaction"),
                 hypothesis = brObj.optString("hypothesis", "Hypothèse"),
-                counterReply = brObj.optString("counterReply", "")
+                counterReply = cleanOptionText(brObj.optString("counterReply", ""))
               )
             )
           }
@@ -408,6 +416,7 @@ class GeminiAiRepository(
   }
 
   private fun cleanOptionText(text: String): String {
-    return text.trim().removeSurrounding("\"").removeSurrounding("«", "»").trim()
+    val unquoted = text.trim().removeSurrounding("\"").removeSurrounding("«", "»").trim()
+    return MarkdownFormatter.cleanForPlainText(unquoted)
   }
 }

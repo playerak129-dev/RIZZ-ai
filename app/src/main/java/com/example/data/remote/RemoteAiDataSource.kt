@@ -45,45 +45,76 @@ class RemoteAiDataSource(
   }
 
   suspend fun generateContent(apiKey: String, request: GeminiRequestDto): AiResult<String> {
-    return try {
-      val response: GeminiResponseDto = service.generateContent(
-        model = AiConfig.MODEL_NAME,
-        apiKey = apiKey,
-        request = request
-      )
+    val maxRetries = 2
+    var attempt = 0
 
-      val responseText = response.candidates
-        ?.firstOrNull()
-        ?.content
-        ?.parts
-        ?.firstOrNull()
-        ?.text
-        ?.trim()
+    while (true) {
+      try {
+        val response: GeminiResponseDto = service.generateContent(
+          model = AiConfig.MODEL_NAME,
+          apiKey = apiKey,
+          request = request
+        )
 
-      if (!responseText.isNullOrBlank()) {
-        AiResult.Success(responseText)
-      } else {
-        val errorMessage = response.error?.message
-        if (errorMessage != null) {
-          AiResult.Error(AiError.Unknown(errorMessage))
+        val candidate = response.candidates?.firstOrNull()
+        val responseText = candidate
+          ?.content
+          ?.parts
+          ?.firstOrNull()
+          ?.text
+          ?.trim()
+
+        if (!responseText.isNullOrBlank()) {
+          return AiResult.Success(responseText)
         } else {
-          AiResult.Error(AiError.InvalidResponse)
+          val finishReason = candidate?.finishReason
+          if (finishReason != null && finishReason != "STOP") {
+            return when (finishReason) {
+              "SAFETY" -> AiResult.Error(AiError.Unknown("La réponse a été filtrée par les règles de sécurité."))
+              "RECITATION" -> AiResult.Error(AiError.Unknown("La réponse a été bloquée pour conformité."))
+              else -> AiResult.Error(AiError.Unknown("Génération interrompue ($finishReason)."))
+            }
+          }
+          val errorMessage = response.error?.message
+          return if (errorMessage != null) {
+            AiResult.Error(AiError.Unknown(errorMessage))
+          } else {
+            AiResult.Error(AiError.InvalidResponse)
+          }
         }
+      } catch (e: SocketTimeoutException) {
+        if (attempt < maxRetries) {
+          attempt++
+          kotlinx.coroutines.delay(1000L * attempt)
+          continue
+        }
+        return AiResult.Error(AiError.NetworkError)
+      } catch (e: IOException) {
+        if (attempt < maxRetries) {
+          attempt++
+          kotlinx.coroutines.delay(1000L * attempt)
+          continue
+        }
+        return AiResult.Error(AiError.NetworkError)
+      } catch (e: HttpException) {
+        val code = e.code()
+        // Transient server errors (500, 502, 503, 504) are eligible for limited retries
+        if ((code == 500 || code == 502 || code == 503 || code == 504) && attempt < maxRetries) {
+          attempt++
+          kotlinx.coroutines.delay(1000L * attempt)
+          continue
+        }
+
+        return when (code) {
+          400 -> AiResult.Error(AiError.Unknown("Requête invalide ou paramètre non pris en charge."))
+          401, 403 -> AiResult.Error(AiError.ApiKeyMissing)
+          429 -> AiResult.Error(AiError.QuotaExceeded)
+          500, 502, 503, 504 -> AiResult.Error(AiError.Unknown("Le service Gemini est temporairement indisponible. Réessayez."))
+          else -> AiResult.Error(AiError.Unknown("Erreur HTTP ${e.code()} : ${e.message()}"))
+        }
+      } catch (e: Exception) {
+        return AiResult.Error(AiError.Unknown(e.message ?: "Erreur inconnue"))
       }
-    } catch (e: SocketTimeoutException) {
-      AiResult.Error(AiError.NetworkError)
-    } catch (e: IOException) {
-      AiResult.Error(AiError.NetworkError)
-    } catch (e: HttpException) {
-      when (e.code()) {
-        400 -> AiResult.Error(AiError.Unknown("Requête invalide ou paramètre non pris en charge."))
-        401, 403 -> AiResult.Error(AiError.ApiKeyMissing)
-        429 -> AiResult.Error(AiError.QuotaExceeded)
-        500, 503 -> AiResult.Error(AiError.Unknown("Le service Gemini est temporairement indisponible. Réessayez."))
-        else -> AiResult.Error(AiError.Unknown("Erreur HTTP ${e.code()} : ${e.message()}"))
-      }
-    } catch (e: Exception) {
-      AiResult.Error(AiError.Unknown(e.message ?: "Erreur inconnue"))
     }
   }
 }

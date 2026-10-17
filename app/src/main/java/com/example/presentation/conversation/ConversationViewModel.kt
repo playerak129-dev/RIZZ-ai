@@ -276,11 +276,27 @@ class ConversationViewModel(
       .lastOrNull { it.role == MessageRole.USER }
       ?: return
 
-    executeSendMessage(
-      textToSend = userMessage.content,
-      imageToSend = null,
-      isRetry = true
-    )
+    viewModelScope.launch {
+      repository.deleteMessage(assistantMessageId)
+      executeSendMessage(
+        textToSend = userMessage.content,
+        imageToSend = null,
+        isRetry = true
+      )
+    }
+  }
+
+  fun restoreFailedPromptToInput() {
+    val prompt = lastFailedPrompt ?: return
+    _uiState.update {
+      it.copy(
+        inputText = prompt,
+        attachedImage = lastFailedImage,
+        errorMessage = null,
+        canRetry = false,
+        orbState = OrbState.FOCUSED
+      )
+    }
   }
 
   fun reuseAssistantMessage(text: String) {

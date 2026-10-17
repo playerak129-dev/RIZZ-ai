@@ -48,6 +48,7 @@ data class ConversationUiState(
   val isRenameDialogOpen: Boolean = false,
   val renamingConversationId: String? = null,
   val renamingConversationTitle: String = "",
+  val favoriteConversationIds: Set<String> = emptySet(),
 
   // Settings & Security
   val isSettingsOpen: Boolean = false,

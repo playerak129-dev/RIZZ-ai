@@ -47,6 +47,15 @@ class InMemoryConversationRepository : ConversationRepository {
     }
   }
 
+  override suspend fun deleteMessage(messageId: String) {
+    _conversation.update { current ->
+      current.copy(messages = current.messages.filter { it.id != messageId })
+    }
+    _conversationsMap.update { map ->
+      map + (_conversation.value.id to _conversation.value)
+    }
+  }
+
   override suspend fun clearConversation() {
     _conversation.update { current ->
       current.copy(messages = emptyList())

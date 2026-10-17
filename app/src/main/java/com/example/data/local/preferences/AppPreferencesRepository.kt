@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.core.SecurityUtils
 import com.example.domain.model.ConversationStyle
@@ -25,6 +26,7 @@ class AppPreferencesRepository(private val context: Context) {
     val DEFAULT_INTENSITY = intPreferencesKey("default_intensity")
     val PIN_LOCK_ENABLED = booleanPreferencesKey("pin_lock_enabled")
     val PIN_HASH = stringPreferencesKey("pin_hash")
+    val FAVORITE_CONVERSATION_IDS = stringSetPreferencesKey("favorite_conversation_ids")
   }
 
   val themeModeFlow: Flow<ThemeMode> = context.dataStore.data.map { preferences ->
@@ -92,6 +94,21 @@ class AppPreferencesRepository(private val context: Context) {
         preferences[Keys.PIN_HASH] = SecurityUtils.hashPin(rawPin)
       } else if (!enabled) {
         preferences.remove(Keys.PIN_HASH)
+      }
+    }
+  }
+
+  val favoriteConversationIdsFlow: Flow<Set<String>> = context.dataStore.data.map { preferences ->
+    preferences[Keys.FAVORITE_CONVERSATION_IDS] ?: emptySet()
+  }
+
+  suspend fun toggleFavoriteConversation(conversationId: String) {
+    context.dataStore.edit { preferences ->
+      val current = preferences[Keys.FAVORITE_CONVERSATION_IDS] ?: emptySet()
+      if (current.contains(conversationId)) {
+        preferences[Keys.FAVORITE_CONVERSATION_IDS] = current - conversationId
+      } else {
+        preferences[Keys.FAVORITE_CONVERSATION_IDS] = current + conversationId
       }
     }
   }

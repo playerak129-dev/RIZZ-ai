@@ -31,6 +31,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -282,5 +283,18 @@ class Phase5And6FullTestSuite {
     viewModel.reuseAssistantMessage("Une superbe punchline")
     assertEquals("Une superbe punchline", viewModel.uiState.value.inputText)
     assertEquals(com.example.presentation.components.orb.OrbState.FOCUSED, viewModel.uiState.value.orbState)
+  }
+
+  @Test
+  fun `copy to clipboard toast triggers user feedback notification`() = runTest {
+    val repo = InMemoryConversationRepository()
+    val viewModel = ConversationViewModel(repository = repo)
+
+    assertNull(viewModel.uiState.value.toastMessage)
+    viewModel.showToast("Réponse copiée dans le presse-papier !")
+    assertEquals("Réponse copiée dans le presse-papier !", viewModel.uiState.value.toastMessage)
+
+    viewModel.clearToast()
+    assertNull(viewModel.uiState.value.toastMessage)
   }
 }

@@ -6,5 +6,6 @@ data class ConversationSummary(
   val lastMessageSnippet: String,
   val messageCount: Int,
   val activeStyle: ConversationStyle,
-  val updatedAt: Long
+  val updatedAt: Long,
+  val isFavorite: Boolean = false
 )

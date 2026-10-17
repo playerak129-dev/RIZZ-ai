@@ -137,6 +137,10 @@ class RoomConversationRepository(
     }
   }
 
+  override suspend fun deleteMessage(messageId: String) = withContext(Dispatchers.IO) {
+    messageDao.deleteMessageById(messageId)
+  }
+
   override suspend fun clearConversation() = withContext(Dispatchers.IO) {
     val convId = activeConversationId.value ?: return@withContext
     messageDao.deleteMessagesForConversation(convId)

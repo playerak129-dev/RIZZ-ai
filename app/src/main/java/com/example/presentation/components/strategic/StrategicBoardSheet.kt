@@ -47,7 +47,9 @@ import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import com.example.core.MarkdownFormatter
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -420,11 +422,17 @@ fun StrategicBoardSheet(
                   Spacer(modifier = Modifier.height(10.dp))
 
                   // Proposed Reply Text
+                  val formattedReply = remember(selectedOption.proposedReply) {
+                    MarkdownFormatter.formatToAnnotatedString(
+                      input = selectedOption.proposedReply,
+                      isDark = true
+                    )
+                  }
                   Text(
-                    text = selectedOption.proposedReply,
+                    text = formattedReply,
                     style = MaterialTheme.typography.bodyLarge.copy(
                       fontWeight = FontWeight.SemiBold,
-                      lineHeight = 22.sp
+                      lineHeight = 24.sp
                     ),
                     color = MaterialTheme.colorScheme.onSurface
                   )

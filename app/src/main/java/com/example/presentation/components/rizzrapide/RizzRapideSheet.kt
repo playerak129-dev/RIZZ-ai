@@ -35,7 +35,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
+import com.example.core.MarkdownFormatter
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -327,9 +329,15 @@ fun RizzRapideSheet(
                 }
 
                 Spacer(modifier = Modifier.height(6.dp))
+                val formattedOption = remember(option) {
+                  MarkdownFormatter.formatToAnnotatedString(
+                    input = option,
+                    isDark = true
+                  )
+                }
                 Text(
-                  text = option,
-                  style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
+                  text = formattedOption,
+                  style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
                   color = MaterialTheme.colorScheme.onSurface
                 )
               }
