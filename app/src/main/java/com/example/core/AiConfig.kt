@@ -4,7 +4,10 @@ import com.example.domain.model.ConversationStyle
 import com.example.domain.model.StyleSettings
 
 object AiConfig {
-  const val MODEL_NAME = "gemini-3.5-flash"
+  // Official Google Gemini recommended alias for the Flash series on free tier (routes to latest stable Flash)
+  const val MODEL_NAME = "gemini-flash-latest"
+  const val FALLBACK_MODEL_NAME = "gemini-2.5-flash"
+  const val EXPERIMENTAL_MODEL_NAME = "gemini-3.5-flash"
   const val BASE_URL = "https://generativelanguage.googleapis.com/"
   const val CONNECT_TIMEOUT_SECONDS = 60L
   const val READ_TIMEOUT_SECONDS = 60L

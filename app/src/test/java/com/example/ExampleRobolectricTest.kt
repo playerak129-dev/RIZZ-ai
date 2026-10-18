@@ -31,8 +31,12 @@ class ExampleRobolectricTest {
   @Test
   fun `mainActivity launches and renders liquid glass and orb without crashing`() {
     val controller = Robolectric.buildActivity(MainActivity::class.java).create()
-    val activity = controller.get()
-    assertEquals(false, activity.isFinishing)
-    assertNotNull(activity.window.decorView)
+    try {
+      val activity = controller.get()
+      assertEquals(false, activity.isFinishing)
+      assertNotNull(activity.window.decorView)
+    } finally {
+      controller.destroy()
+    }
   }
 }

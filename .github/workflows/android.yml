@@ -38,6 +38,14 @@ jobs:
       - name: Verify Gradle installation
         run: gradle --version
 
+      - name: Configure Environment Secrets
+        run: |
+          if [ -n "${{ secrets.GEMINI_API_KEY }}" ]; then
+            echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
+          elif [ ! -f .env ]; then
+            cp .env.example .env
+          fi
+
       - name: Generate Debug Keystore
         run: |
           keytool -genkeypair \

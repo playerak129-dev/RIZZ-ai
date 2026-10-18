@@ -16,11 +16,14 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowLooper
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -28,6 +31,16 @@ class SegmentedResponseAndCopyTest {
 
   @get:Rule
   val composeTestRule = createComposeRule()
+
+  @Before
+  fun setUp() {
+    ShadowLooper.idleMainLooper()
+  }
+
+  @After
+  fun tearDown() {
+    ShadowLooper.idleMainLooper()
+  }
 
   // =========================================================================
   // 1. Tests unitaires de segmentation intelligente (MessageSegmenter)
@@ -201,6 +214,7 @@ class SegmentedResponseAndCopyTest {
     composeTestRule.onNodeWithTag("copy_message_msg_segmented_1").performClick()
     assertTrue("Should contain Block 1", copiedText!!.contains("Premier choix"))
     assertTrue("Should contain Block 2", copiedText!!.contains("Deuxième choix"))
+    composeTestRule.mainClock.advanceTimeBy(2500)
   }
 
   @Test
@@ -231,6 +245,7 @@ class SegmentedResponseAndCopyTest {
     // Clic sur la copie globale
     composeTestRule.onNodeWithTag("copy_message_msg_short_1").performClick()
     assertEquals("Je te conseille d'attendre demain matin pour lui écrire 😉.", copiedText)
+    composeTestRule.mainClock.advanceTimeBy(2500)
   }
 
   @Test

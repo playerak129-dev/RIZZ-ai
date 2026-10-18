@@ -377,4 +377,123 @@ class RobustnessAndReliabilityTest {
     // No spurious Gemini API call was executed
     assertEquals(0, fakeRepo.callCount)
   }
+
+  // --- 13. Précision du diagnostic d'erreur HTTP et fallback de modèle ---
+
+  @Test
+  fun `13 - http 401 returns ApiKeyInvalid distinguishing it from missing key`() = runTest {
+    val mockService = object : com.example.data.remote.GeminiApiService {
+      override suspend fun generateContent(
+        model: String,
+        apiKey: String,
+        request: GeminiRequestDto
+      ): GeminiResponseDto {
+        val body = "{\"error\":{\"message\":\"API key not valid\"}}".toResponseBody("application/json".toMediaTypeOrNull())
+        throw HttpException(Response.error<GeminiResponseDto>(401, body))
+      }
+    }
+
+    val dataSource = RemoteAiDataSource(mockService)
+    val result = dataSource.generateContent("invalid_key", GeminiRequestDto(emptyList()))
+
+    assertTrue(result is AiResult.Error)
+    assertEquals(AiError.ApiKeyInvalid, (result as AiResult.Error).error)
+  }
+
+  @Test
+  fun `13 - http 403 returns PermissionDenied`() = runTest {
+    val mockService = object : com.example.data.remote.GeminiApiService {
+      override suspend fun generateContent(
+        model: String,
+        apiKey: String,
+        request: GeminiRequestDto
+      ): GeminiResponseDto {
+        val body = "{\"error\":{\"message\":\"Permission denied\"}}".toResponseBody("application/json".toMediaTypeOrNull())
+        throw HttpException(Response.error<GeminiResponseDto>(403, body))
+      }
+    }
+
+    val dataSource = RemoteAiDataSource(mockService)
+    val result = dataSource.generateContent("restricted_key", GeminiRequestDto(emptyList()))
+
+    assertTrue(result is AiResult.Error)
+    assertEquals(AiError.PermissionDenied, (result as AiResult.Error).error)
+  }
+
+  @Test
+  fun `13 - http 400 returns BadRequest`() = runTest {
+    val mockService = object : com.example.data.remote.GeminiApiService {
+      override suspend fun generateContent(
+        model: String,
+        apiKey: String,
+        request: GeminiRequestDto
+      ): GeminiResponseDto {
+        val body = "{\"error\":{\"message\":\"Bad Request\"}}".toResponseBody("application/json".toMediaTypeOrNull())
+        throw HttpException(Response.error<GeminiResponseDto>(400, body))
+      }
+    }
+
+    val dataSource = RemoteAiDataSource(mockService)
+    val result = dataSource.generateContent("valid_key", GeminiRequestDto(emptyList()))
+
+    assertTrue(result is AiResult.Error)
+    assertEquals(AiError.BadRequest, (result as AiResult.Error).error)
+  }
+
+  @Test
+  fun `13 - http 404 triggers model fallback and succeeds if fallback exists`() = runTest {
+    val modelsRequested = mutableListOf<String>()
+    val mockService = object : com.example.data.remote.GeminiApiService {
+      override suspend fun generateContent(
+        model: String,
+        apiKey: String,
+        request: GeminiRequestDto
+      ): GeminiResponseDto {
+        modelsRequested.add(model)
+        if (model == AiConfig.MODEL_NAME) {
+          val body = "{\"error\":{\"message\":\"Model not found\"}}".toResponseBody("application/json".toMediaTypeOrNull())
+          throw HttpException(Response.error<GeminiResponseDto>(404, body))
+        }
+        return GeminiResponseDto(
+          candidates = listOf(
+            CandidateDto(
+              content = ContentDto(
+                parts = listOf(PartDto(text = "Succès avec modèle de repli"))
+              )
+            )
+          )
+        )
+      }
+    }
+
+    val dataSource = RemoteAiDataSource(mockService)
+    val result = dataSource.generateContent("valid_key", GeminiRequestDto(emptyList()))
+
+    assertTrue(result is AiResult.Success)
+    assertEquals("Succès avec modèle de repli", (result as AiResult.Success).data)
+    assertEquals(listOf(AiConfig.MODEL_NAME, AiConfig.FALLBACK_MODEL_NAME), modelsRequested)
+  }
+
+  @Test
+  fun `13 - http 503 returns ServerUnavailable after controlled retries`() = runTest {
+    var attempts = 0
+    val mockService = object : com.example.data.remote.GeminiApiService {
+      override suspend fun generateContent(
+        model: String,
+        apiKey: String,
+        request: GeminiRequestDto
+      ): GeminiResponseDto {
+        attempts++
+        val body = "{\"error\":{\"message\":\"Service Unavailable\"}}".toResponseBody("application/json".toMediaTypeOrNull())
+        throw HttpException(Response.error<GeminiResponseDto>(503, body))
+      }
+    }
+
+    val dataSource = RemoteAiDataSource(mockService)
+    val result = dataSource.generateContent("valid_key", GeminiRequestDto(emptyList()))
+
+    assertTrue(result is AiResult.Error)
+    assertEquals(AiError.ServerUnavailable, (result as AiResult.Error).error)
+    assertEquals(3, attempts) // 1 initial + 2 retries
+  }
 }

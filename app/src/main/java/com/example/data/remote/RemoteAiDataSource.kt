@@ -24,8 +24,9 @@ class RemoteAiDataSource(
     .build()
 
   private val loggingInterceptor = HttpLoggingInterceptor().apply {
-    // Basic level: logs method and URL response status only, never logging sensitive headers, API keys or image bytes
     level = HttpLoggingInterceptor.Level.BASIC
+    redactHeader("x-goog-api-key")
+    redactHeader("Authorization")
   }
 
   private val okHttpClient: OkHttpClient = OkHttpClient.Builder()
@@ -47,11 +48,12 @@ class RemoteAiDataSource(
   suspend fun generateContent(apiKey: String, request: GeminiRequestDto): AiResult<String> {
     val maxRetries = 2
     var attempt = 0
+    var activeModel = AiConfig.MODEL_NAME
 
     while (true) {
       try {
         val response: GeminiResponseDto = service.generateContent(
-          model = AiConfig.MODEL_NAME,
+          model = activeModel,
           apiKey = apiKey,
           request = request
         )
@@ -105,12 +107,20 @@ class RemoteAiDataSource(
           continue
         }
 
+        // Automatic fallback if model is not available or unrecognized
+        if (code == 404 && activeModel != AiConfig.FALLBACK_MODEL_NAME) {
+          activeModel = AiConfig.FALLBACK_MODEL_NAME
+          continue
+        }
+
         return when (code) {
-          400 -> AiResult.Error(AiError.Unknown("Requête invalide ou paramètre non pris en charge."))
-          401, 403 -> AiResult.Error(AiError.ApiKeyMissing)
+          400 -> AiResult.Error(AiError.BadRequest)
+          401 -> AiResult.Error(AiError.ApiKeyInvalid)
+          403 -> AiResult.Error(AiError.PermissionDenied)
+          404 -> AiResult.Error(AiError.ModelNotFound)
           429 -> AiResult.Error(AiError.QuotaExceeded)
-          500, 502, 503, 504 -> AiResult.Error(AiError.Unknown("Le service Gemini est temporairement indisponible. Réessayez."))
-          else -> AiResult.Error(AiError.Unknown("Erreur HTTP ${e.code()} : ${e.message()}"))
+          500, 502, 503, 504 -> AiResult.Error(AiError.ServerUnavailable)
+          else -> AiResult.Error(AiError.Unknown("Erreur HTTP $code : ${e.message()}"))
         }
       } catch (e: Exception) {
         return AiResult.Error(AiError.Unknown(e.message ?: "Erreur inconnue"))

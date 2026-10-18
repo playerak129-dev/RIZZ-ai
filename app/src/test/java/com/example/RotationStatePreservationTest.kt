@@ -16,6 +16,7 @@ import com.example.domain.model.ConversationStyle
 import com.example.domain.model.Message
 import com.example.domain.model.MessageRole
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -32,6 +33,19 @@ class RotationStatePreservationTest {
 
   @get:Rule
   val composeTestRule = createAndroidComposeRule<MainActivity>()
+
+  @After
+  fun tearDown() {
+    try {
+      composeTestRule.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.DESTROYED)
+    } catch (_: Throwable) {
+      try {
+        composeTestRule.activity.finish()
+      } catch (_: Throwable) {
+      }
+    }
+    org.robolectric.shadows.ShadowLooper.idleMainLooper()
+  }
 
   @Test
   fun `conversation history and input text are preserved during device rotation`() {
