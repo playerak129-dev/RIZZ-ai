@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build & Test Android Native
+    name: Build, Publish APK & Test Android
     runs-on: ubuntu-latest
 
     steps:
@@ -51,24 +51,27 @@ jobs:
             -validity 10000 \
             -dname "CN=Android Debug,O=Android,C=US"
 
-      - name: Run Unit & Local Tests
-        run: gradle :app:testDebugUnitTest --no-daemon
-
+      # Étape 1 : compiler l'APK avant les tests.
       - name: Build Debug APK
-        run: gradle assembleDebug --no-daemon
+        run: gradle :app:assembleDebug --no-daemon
 
+      # Étape 2 : vérifier que l'APK existe réellement.
       - name: Verify Debug APK output
         run: |
           echo "Checking generated APK files:"
-          ls -la app/build/outputs/apk/debug/
+          ls -lah app/build/outputs/apk/debug/
 
-          if [ ! -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
-            echo "ERROR: app-debug.apk was not found!"
+          APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
+
+          if [ ! -s "$APK_PATH" ]; then
+            echo "ERROR: app-debug.apk was not generated or is empty."
             exit 1
           fi
 
-          echo "SUCCESS: app-debug.apk successfully built and verified."
+          echo "SUCCESS: Debug APK exists."
+          sha256sum "$APK_PATH"
 
+      # Étape 3 : publier l'APK avant les tests.
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -76,3 +79,22 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
           if-no-files-found: error
+
+      # Étape 4 : exécuter les tests sans masquer leurs échecs.
+      # Un échec ici fera apparaître le workflow en rouge,
+      # mais l'APK aura déjà été téléversé.
+      - name: Run Unit & Local Tests
+        if: ${{ always() && !cancelled() }}
+        run: gradle :app:testDebugUnitTest --no-daemon
+
+      # Étape 5 : publier les rapports de tests, même en cas d'échec.
+      - name: Upload Unit Test Reports
+        if: ${{ always() && !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: rizz-ai-2.0-unit-test-reports
+          path: |
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/test-results/testDebugUnitTest/
+          retention-days: 14
+          if-no-files-found: warn
