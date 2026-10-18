@@ -1,5 +1,6 @@
 package com.example
 
+import android.view.Choreographer
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -17,6 +18,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -29,6 +31,53 @@ class SegmentedResponseAndCopyTest {
 
     @get:Rule
     val composeTestRule = createComposeRule()
+
+    /**
+     * Tentative de correction de la synchronisation Compose/Robolectric.
+     *
+     * Cette méthode dépend des détails internes de Compose.
+     * Si ces détails changent selon la version utilisée, elle peut échouer.
+     */
+    @Before
+    fun resetComposeChoreographerForRobolectric() {
+        val dispatcherClass =
+            Class.forName("androidx.compose.ui.platform.AndroidUiDispatcher")
+
+        val companion = dispatcherClass
+            .getDeclaredField("Companion")
+            .apply {
+                isAccessible = true
+            }
+            .get(null)
+
+        val mainContext = companion.javaClass
+            .getDeclaredMethod("getMain")
+            .apply {
+                isAccessible = true
+            }
+            .invoke(companion)
+
+        val combinedContextClass =
+            Class.forName("kotlin.coroutines.CombinedContext")
+
+        val dispatcher = combinedContextClass
+            .getDeclaredField("element")
+            .apply {
+                isAccessible = true
+            }
+            .get(mainContext)
+
+        val choreographerField = dispatcherClass
+            .getDeclaredField("choreographer")
+            .apply {
+                isAccessible = true
+            }
+
+        choreographerField.set(
+            dispatcher,
+            Choreographer.getInstance()
+        )
+    }
 
     // =========================================================================
     // 1. Tests unitaires de segmentation intelligente
@@ -264,12 +313,10 @@ class SegmentedResponseAndCopyTest {
 
         composeTestRule.waitForIdle()
 
-        // Aucun sous-bloc artificiel ne doit exister.
         composeTestRule
             .onAllNodesWithTag("copy_block_msg_short_1_1")
             .assertCountEquals(0)
 
-        // Le bouton de copie globale doit être visible.
         composeTestRule
             .onNodeWithTag("copy_message_msg_short_1")
             .assertIsDisplayed()
@@ -304,12 +351,10 @@ class SegmentedResponseAndCopyTest {
 
         composeTestRule.waitForIdle()
 
-        // Aucun bouton de copie par sous-bloc pour l'utilisateur.
         composeTestRule
             .onAllNodesWithTag("copy_block_user_msg_1_1")
             .assertCountEquals(0)
 
-        // Aucun bouton de copie globale pour le message utilisateur.
         composeTestRule
             .onAllNodesWithTag("copy_message_user_msg_1")
             .assertCountEquals(0)
