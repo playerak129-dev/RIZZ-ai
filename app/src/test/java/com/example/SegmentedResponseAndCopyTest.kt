@@ -1,9 +1,9 @@
 package com.example
 
-import androidx.compose.ui.test.assertDoesNotExist
-import androidx.compose.ui.test.assertExists
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import com.example.core.MarkdownFormatter
@@ -31,7 +31,7 @@ class SegmentedResponseAndCopyTest {
     val composeTestRule = createComposeRule()
 
     // =========================================================================
-    // 1. Tests unitaires de segmentation intelligente (MessageSegmenter)
+    // 1. Tests unitaires de segmentation intelligente
     // =========================================================================
 
     @Test
@@ -168,7 +168,7 @@ class SegmentedResponseAndCopyTest {
     }
 
     // =========================================================================
-    // 2. Tests d'interface Robolectric : Copie indépendante par bloc
+    // 2. Tests d'interface : copie indépendante par bloc
     // =========================================================================
 
     @Test
@@ -195,18 +195,22 @@ class SegmentedResponseAndCopyTest {
             }
         }
 
+        composeTestRule.waitForIdle()
+
         composeTestRule
             .onNodeWithTag("copy_block_msg_segmented_1_1")
-            .assertExists()
+            .assertIsDisplayed()
 
         composeTestRule
             .onNodeWithTag("copy_block_msg_segmented_1_2")
-            .assertExists()
+            .assertIsDisplayed()
 
-        // Copier uniquement le Bloc 2.
+        // Copier uniquement le bloc 2.
         composeTestRule
             .onNodeWithTag("copy_block_msg_segmented_1_2")
             .performClick()
+
+        composeTestRule.waitForIdle()
 
         assertNotNull("Copied text should not be null", copiedText)
         assertTrue("Should copy only Block 2", copiedText!!.contains("Deuxième choix"))
@@ -215,10 +219,12 @@ class SegmentedResponseAndCopyTest {
         assertFalse("Must NOT contain UI title", copiedText!!.contains("Bloc 2"))
         assertFalse("Must NOT contain button label", copiedText!!.contains("Copier"))
 
-        // Copier uniquement le Bloc 1.
+        // Copier uniquement le bloc 1.
         composeTestRule
             .onNodeWithTag("copy_block_msg_segmented_1_1")
             .performClick()
+
+        composeTestRule.waitForIdle()
 
         assertTrue("Should copy only Block 1", copiedText!!.contains("Premier choix"))
         assertTrue("Should contain emoji of Block 1", copiedText!!.contains("☕"))
@@ -228,6 +234,8 @@ class SegmentedResponseAndCopyTest {
         composeTestRule
             .onNodeWithTag("copy_message_msg_segmented_1")
             .performClick()
+
+        composeTestRule.waitForIdle()
 
         assertTrue("Should contain Block 1", copiedText!!.contains("Premier choix"))
         assertTrue("Should contain Block 2", copiedText!!.contains("Deuxième choix"))
@@ -254,20 +262,23 @@ class SegmentedResponseAndCopyTest {
             }
         }
 
-        // Le message court ne doit pas avoir de sous-blocs artificiels.
-        composeTestRule
-            .onNodeWithTag("copy_block_msg_short_1_1")
-            .assertDoesNotExist()
+        composeTestRule.waitForIdle()
 
-        // Le bouton de copie globale doit être présent.
+        // Aucun sous-bloc artificiel ne doit exister.
+        composeTestRule
+            .onAllNodesWithTag("copy_block_msg_short_1_1")
+            .assertCountEquals(0)
+
+        // Le bouton de copie globale doit être visible.
         composeTestRule
             .onNodeWithTag("copy_message_msg_short_1")
             .assertIsDisplayed()
 
-        // Copier le message complet.
         composeTestRule
             .onNodeWithTag("copy_message_msg_short_1")
             .performClick()
+
+        composeTestRule.waitForIdle()
 
         assertEquals(
             "Je te conseille d'attendre demain matin pour lui écrire 😉.",
@@ -291,13 +302,16 @@ class SegmentedResponseAndCopyTest {
             }
         }
 
-        // Aucun bloc ou bouton de sous-copie pour l'utilisateur.
-        composeTestRule
-            .onNodeWithTag("copy_block_user_msg_1_1")
-            .assertDoesNotExist()
+        composeTestRule.waitForIdle()
 
+        // Aucun bouton de copie par sous-bloc pour l'utilisateur.
         composeTestRule
-            .onNodeWithTag("copy_message_user_msg_1")
-            .assertDoesNotExist()
+            .onAllNodesWithTag("copy_block_user_msg_1_1")
+            .assertCountEquals(0)
+
+        // Aucun bouton de copie globale pour le message utilisateur.
+        composeTestRule
+            .onAllNodesWithTag("copy_message_user_msg_1")
+            .assertCountEquals(0)
     }
 }
